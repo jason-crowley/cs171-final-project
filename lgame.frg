@@ -1,128 +1,129 @@
 #lang forge
 
 option problem_type temporal
+option max_tracelength 10
 
 abstract sig Player {}
 one sig Red, Blue extends Player {}
 
-abstract sig Cell {}
-one sig Red1, Red2, Red3, Red4, Blue1, Blue2, Blue3, Blue4, N1, N2 extends Cell {}
-
 one sig Game {
-  var board: pfunc Int -> Int -> Cell,
+  var red: set Int -> Int,
+  var blue: set Int -> Int,
+  var neutral: set Int -> Int,
   var turn: one Player
 }
 
 pred init {
-  Game.board[1][-1] = Red1
-  Game.board[1][0] = Red2
-  Game.board[0][0] = Red3
-  Game.board[-1][0] = Red4
-  Game.board[-2][0] = Blue1
-  Game.board[-2][-1] = Blue2
-  Game.board[-1][-1] = Blue3
-  Game.board[0][-1] = Blue4
-  Game.board[1][-2] = N1
-  Game.board[-2][1] = N2
+  Game.red =
+     1 -> -1 +
+     1 ->  0 +
+     0 ->  0 +
+    -1 ->  0
+  Game.blue =
+    -2 ->  0 +
+    -2 -> -1 +
+    -1 -> -1 +
+     0 -> -1
+  Game.neutral =
+     1 -> -2 +
+    -2 ->  1
   Game.turn = Red
 }
 
-pred adjacent[c1: one Cell, c2: one Cell] {
-  some r, c: Int | {
-    Game.board[r][c] = c1
-    (
-      Game.board[subtract[r, 1]][c] = c2 or
-      Game.board[r][subtract[c, 1]] = c2 or
-      Game.board[add[r, 1]][c] = c2 or
-      Game.board[r][add[c, 1]] = c2
-    )
-  }
+pred adjacent[x: Int, y: Int] {
+  subtract[max[x + y], min[x + y]] = 1
 }
 
-pred diagonal[c1: one Cell, c2: one Cell] {
-  some r, c: Int | {
-    Game.board[r][c] = c1
-    (
-      Game.board[subtract[r, 1]][subtract[c, 1]] = c2 or
-      Game.board[subtract[r, 1]][add[c, 1]] = c2 or
-      Game.board[add[r, 1]][subtract[c, 1]] = c2 or
-      Game.board[add[r, 1]][add[c, 1]] = c2
-    )
-  }
-}
-
-pred wellFormedLPieces {
-  always {
-    adjacent[Red1, Red2]
-    adjacent[Red2, Red3]
-    adjacent[Red3, Red4]
-    diagonal[Red1, Red3]
-    not diagonal[Red2, Red4]
-
-    adjacent[Blue1, Blue2]
-    adjacent[Blue2, Blue3]
-    adjacent[Blue3, Blue4]
-    diagonal[Blue1, Blue3]
-    not diagonal[Blue2, Blue4]
-  }
-}
-
-pred wellFormedBoard {
-  always {
-    all row, col: Int | {
-      (row < -2 or row > 1 or col < -2 or col > 1)
-        implies no Game.board[row][col]
-    }
-    all cell: Cell | one r, c: Int | Game.board[r][c] = cell
+pred isLShape[r1, c1, r2, c2, r3, c3, r4, c4: Int] {
+  {
+    r1 = r2
+    adjacent[c1, c2]
+    r2 = r3
+    adjacent[c2, c3]
+    c3 = c4
+    adjacent[r3, r4]
+  } or {
+    c1 = c2
+    adjacent[r1, r2]
+    c2 = c3
+    adjacent[r2, r3]
+    r3 = r4
+    adjacent[c3, c4]
   }
 }
 
 pred wellFormed {
-  wellFormedLPieces
-  wellFormedBoard
-}
+  always {
+    #red = 4
+    #blue = 4
+    #neutral = 2
 
-pred transLPiece {
-  let red = Red1 + Red2 + Red3 + Red4 |
-  let blue = Blue1 + Blue2 + Blue3 + Blue4 |
-  Game.turn = Red => {
-    Game.board'.red != Game.board.red
-    Game.board'.blue = Game.board.blue
-  } else {
-    Game.board'.blue != Game.board.blue
-    Game.board'.red = Game.board.red
+    no red & blue
+    no red & neutral
+    no blue & neutral
+
+    some r1, c1, r2, c2, r3, c3, r4, c4: Int | {
+      Game.red = r1->c1 + r2->c2 + r3->c3 + r4->c4
+      isLShape[r1, c1, r2, c2, r3, c3, r4, c4]
+    }
+
+    some r1, c1, r2, c2, r3, c3, r4, c4: Int | {
+      Game.blue = r1->c1 + r2->c2 + r3->c3 + r4->c4
+      isLShape[r1, c1, r2, c2, r3, c3, r4, c4]
+    }
   }
-  Game.board'.N1 = Game.board.N1
-  Game.board'.N2 = Game.board.N2
-  Game.turn' != Game.turn
 }
 
-pred transNPiece {
-  Game.board'.(Cell - N1 - N2) = Game.board.(Cell - N1 - N2)
-  Game.board'.N1 = Game.board.N1 or Game.board'.N2 = Game.board.N2
-  Game.turn' != Game.turn
+pred transEnabled[L: set Int -> Int] {
+  Game.turn = Red => {
+    L != Game.red
+    L in Int->Int - Game.(blue + neutral)
+  } else {
+    L != Game.blue
+    L in Int->Int - Game.(red + neutral)
+  }
 }
 
-pred winningState {
-   {Game.board'.(Blue1 + Blue2 + Blue3 + Blue4) = Game.board.(Blue1 + Blue2 + Blue3 + Blue4)
-    Game.board'.N1 = Game.board.N1
-    Game.board'.N2 = Game.board.N2
-   } implies Game.board'.(Red1 + Red2 + Red3 + Red4) = Game.board.(Red1 + Red2 + Red3 + Red4)
+pred trans[L: set Int -> Int] {
+  Game.turn = Red => {
+    Game.red' = L
+    blue' = blue
+  } else {
+    Game.blue' = L
+    red' = red
+  }
+  lone neutral' - neutral
+  turn' != turn
 }
 
 pred doNothing {
-  Game.board' = Game.board
-  Game.turn' = Game.turn
+  red' = red
+  blue' = blue
+  neutral' = neutral
+  turn' = turn
 }
 
 pred traces {
   init
   always {
-    transLPiece or doNothing
-    // doNothing => not transEnabled
+    some r1, c1, r2, c2, r3, c3, r4, c4: Int | {
+      isLShape[r1, c1, r2, c2, r3, c3, r4, c4]
+      let L = r1->c1 + r2->c2 + r3->c3 + r4->c4 | {
+        #L = 4
+        transEnabled[L]
+        trans[L]
+      }
+    } or {
+      no r1, c1, r2, c2, r3, c3, r4, c4: Int | {
+        isLShape[r1, c1, r2, c2, r3, c3, r4, c4]
+        let L = r1->c1 + r2->c2 + r3->c3 + r4->c4 | {
+          #L = 4
+          transEnabled[L]
+        }
+      }
+      doNothing
+    }
   }
-  Game.board' != Game.board
-  Game.board'' != Game.board'
 }
 
-run { wellFormed traces } for 3 Int
+run { wellFormed traces } for 2 Int
