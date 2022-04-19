@@ -13,6 +13,7 @@ one sig Game {
   var turn: one Player
 }
 
+// Game board is indexed from -1 to 2 to avoid overflow
 pred init {
   Game.red =
      1 -> -1 +
@@ -34,21 +35,27 @@ pred adjacent[x: Int, y: Int] {
   subtract[max[x + y], min[x + y]] = 1
 }
 
+pred rowAdjacent[r1, c1, r2, c2: Int] {
+  adjacent[r1, r2]
+  c1 = c2
+}
+
+pred colAdjacent[r1, c1, r2, c2: Int] {
+  r1 = r2
+  adjacent[c1, c2]
+}
+
 pred isLShape[r1, c1, r2, c2, r3, c3, r4, c4: Int] {
   {
-    r1 = r2
-    adjacent[c1, c2]
-    r2 = r3
-    adjacent[c2, c3]
-    c3 = c4
-    adjacent[r3, r4]
+    colAdjacent[r1, c1, r2, c2]
+    colAdjacent[r2, c2, r3, c3]
+    rowAdjacent[r3, c3, r4, c4]
+    c1 != c3
   } or {
-    c1 = c2
-    adjacent[r1, r2]
-    c2 = c3
-    adjacent[r2, r3]
-    r3 = r4
-    adjacent[c3, c4]
+    rowAdjacent[r1, c1, r2, c2]
+    rowAdjacent[r2, c2, r3, c3]
+    colAdjacent[r3, c3, r4, c4]
+    r1 != r3
   }
 }
 
@@ -74,26 +81,41 @@ pred wellFormed {
   }
 }
 
-pred transEnabled[L: set Int -> Int] {
-  Game.turn = Red => {
-    L != Game.red
-    L in Int->Int - Game.(blue + neutral)
-  } else {
-    L != Game.blue
-    L in Int->Int - Game.(red + neutral)
+pred validMove[r1, c1, r2, c2, r3, c3, r4, c4: Int] {
+  isLShape[r1, c1, r2, c2, r3, c3, r4, c4]
+  let L = r1->c1 + r2->c2 + r3->c3 + r4->c4 | {
+    Game.turn = Red => {
+      L != Game.red
+      L in Int->Int - Game.(blue + neutral)
+    } else {
+      L != Game.blue
+      L in Int->Int - Game.(red + neutral)
+    }
   }
 }
 
-pred trans[L: set Int -> Int] {
-  Game.turn = Red => {
-    Game.red' = L
-    blue' = blue
-  } else {
-    Game.blue' = L
-    red' = red
+pred canMove {
+  some r1, c1, r2, c2, r3, c3, r4, c4: Int |
+    validMove[r1, c1, r2, c2, r3, c3, r4, c4]
+}
+
+pred isWinner[p: Player] {
+  Game.turn != p and not canMove
+}
+
+pred trans[r1, c1, r2, c2, r3, c3, r4, c4: Int] {
+  validMove[r1, c1, r2, c2, r3, c3, r4, c4]
+  let L = r1->c1 + r2->c2 + r3->c3 + r4->c4 | {
+    Game.turn = Red => {
+      Game.red' = L
+      blue' = blue
+    } else {
+      Game.blue' = L
+      red' = red
+    }
+    lone neutral' - neutral
+    turn' != turn
   }
-  lone neutral' - neutral
-  turn' != turn
 }
 
 pred doNothing {
@@ -106,23 +128,10 @@ pred doNothing {
 pred traces {
   init
   always {
-    some r1, c1, r2, c2, r3, c3, r4, c4: Int | {
-      isLShape[r1, c1, r2, c2, r3, c3, r4, c4]
-      let L = r1->c1 + r2->c2 + r3->c3 + r4->c4 | {
-        #L = 4
-        transEnabled[L]
-        trans[L]
-      }
-    } or {
-      no r1, c1, r2, c2, r3, c3, r4, c4: Int | {
-        isLShape[r1, c1, r2, c2, r3, c3, r4, c4]
-        let L = r1->c1 + r2->c2 + r3->c3 + r4->c4 | {
-          #L = 4
-          transEnabled[L]
-        }
-      }
-      doNothing
-    }
+    canMove => {
+      some r1, c1, r2, c2, r3, c3, r4, c4: Int |
+        trans[r1, c1, r2, c2, r3, c3, r4, c4]
+    } else doNothing
   }
 }
 
