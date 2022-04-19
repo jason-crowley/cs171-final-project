@@ -13,7 +13,7 @@ one sig Game {
   var turn: one Player
 }
 
-// Game board is indexed from -1 to 2 to avoid overflow
+// Game board is indexed from -2 to 1 to avoid overflow
 pred init {
   Game.red =
      1 -> -1 +
