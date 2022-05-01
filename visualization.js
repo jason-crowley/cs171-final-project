@@ -18,7 +18,7 @@ function fillPieces(row, col, color) {
             .attr("y", 5+(col*75))
             .attr('width', 75)
             .attr('height', 75)
-    if (color == "gray") // Neutral 
+    if (color == "neutral") // Neutral 
          d3.select(svg)
             .append("rect")
             .style("fill", "gray")
@@ -29,8 +29,25 @@ function fillPieces(row, col, color) {
 }   
 
 function printState() {
-  drawGrid()
   // Iterate through pieces in Game (red, blue, neutral) and call fillPieces
+  const red = instances[currentInstance].field("red").tuples()
+  const blue = instances[currentInstance].field("blue").tuples()
+  const neutral = instances[currentInstance].field("neutral").tuples()
+
+  for (i=0; i<4; i++){
+    fillPieces(parseInt(red[i].atoms(0)[1].id()) + 2, parseInt(red[i].atoms(0)[2].id()) + 2, "red")
+    // not letting me fill blue in the loop for some reason
+  }
+
+  fillPieces(parseInt(blue[0].atoms(0)[1].id()) + 2, parseInt(blue[0].atoms(0)[2].id()) + 2, "blue")
+  fillPieces(parseInt(blue[1].atoms(0)[1].id()) + 2, parseInt(blue[1].atoms(0)[2].id()) + 2, "blue")
+  fillPieces(parseInt(blue[2].atoms(0)[1].id()) + 2, parseInt(blue[2].atoms(0)[2].id()) + 2, "blue")
+  fillPieces(parseInt(blue[3].atoms(0)[1].id()) + 2, parseInt(blue[3].atoms(0)[2].id()) + 2, "blue")
+
+  for (i=0; i<2; i++) {
+    fillPieces(parseInt(neutral[i].atoms(0)[1].id()) + 2, parseInt(neutral[i].atoms(0)[2].id()) + 2, "neutral")
+  }
+  
 }
 
 function drawGrid() {
@@ -63,4 +80,5 @@ function drawGrid() {
       .attr("y2", 305); 
 }
 
+drawGrid()
 printState()
