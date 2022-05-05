@@ -51,7 +51,11 @@ function drawGrid(offset) {
   d3.select(svg)
     .append('rect')
     .attr('x', 5)
+<<<<<<< HEAD
     .attr('y', 5 + offset * 120)
+=======
+    .attr('y', 5+offset*120)
+>>>>>>> e551f0d2de382d71b4b16c925bf6e9b0272770ea
     .attr('width', 100)
     .attr('height', 100)
     .attr('stroke-width', 2)
@@ -63,14 +67,22 @@ function drawGrid(offset) {
       .style("stroke", "black")
       .style("stroke-width", 3)
       .attr("x1", 5)
+<<<<<<< HEAD
       .attr("y1", 5 + 25 * i + offset * 120)
       .attr("x2", 105)
       .attr("y2", 5 + 25 * i + offset * 120);
   for (i = 1; i < 4; i++)
+=======
+      .attr("y1", 5 + 25*i + offset*120)
+      .attr("x2", 105)
+      .attr("y2", 5 + 25*i + offset*120); 
+  for(i = 1; i < 4; i++)
+>>>>>>> e551f0d2de382d71b4b16c925bf6e9b0272770ea
     d3.select(svg)
       .append('line')
       .style("stroke", "black")
       .style("stroke-width", 3)
+<<<<<<< HEAD
       .attr("x1", 5 + 25 * i)
       .attr("y1", 5 + offset * 120)
       .attr("x2", 5 + 25 * i)
@@ -114,3 +126,14 @@ for (let i = 0; i < instances.length; i++) {
 }
 
 showLoop()
+=======
+      .attr("x1", 5 + 25*i)
+      .attr("y1", 5 + offset*120)
+      .attr("x2", 5 + 25*i)
+      .attr("y2", 105 + offset*120); 
+}
+
+printState(0)
+printState(1)
+printState(2)
+>>>>>>> e551f0d2de382d71b4b16c925bf6e9b0272770ea
