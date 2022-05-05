@@ -28,12 +28,13 @@ function fillPieces(row, col, color, offset) {
       .attr('height', 25)
 }
 
-function printState(offset) {
+function printState(inst, offset) {
   drawGrid(offset)
   // Iterate through pieces in Game (red, blue, neutral) and call fillPieces
-  const red = instances[offset].field("red").tuples()
-  const blue = instances[offset].field("blue").tuples()
-  const neutral = instances[offset].field("neutral").tuples()
+  const red = inst.field("red").tuples()
+  console.log(inst)
+  const blue = inst.field("blue").tuples()
+  const neutral = inst.field("neutral").tuples()
 
 
   for (i = 0; i < 4; i++) {
@@ -108,9 +109,6 @@ function showLoop() {
 
 }
 
-
-for (let i = 0; i < instances.length; i++) {
-  printState(i);
-}
+instances.map(printState)
 
 showLoop()

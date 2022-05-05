@@ -147,19 +147,20 @@ pred noNeutralMoves {
 }
 
 // the theorem tests take minutes to run, recommend commenting out/singling out when testing theorem
-/* test expect {
+test expect {
   vacuity: {traces} for 2 Int is sat
-  // canEndGame: {traces implies eventually doNothing} for 2 Int is sat
-  // canPlayInfinite: {traces implies always canMove} for 2 Int is sat
+  canEndGame: {traces implies eventually doNothing} for 2 Int is sat
+  canPlayInfinite: {traces implies always canMove} for 2 Int is sat
   // noWinUnlessNeutralMove: {(traces and noNeutralMoves) implies always canMove} for 2 Int is theorem
   // noWinOneTurn: {traces implies next_state canMove} for 2 Int is theorem
-  redCanWin: {traces and eventually isWinner[Red]} for 2 Int is sat
-  blueCanWin: {traces and eventually isWinner[Blue]} for 2 Int is sat
-   noLShapeOverconstraints:
-    {traces and eventually Game.red == -2->-2 + -2->-1 + -2->0 + -1->-2} is sat
-    {traces and eventually Game.red == -2->-2 + -2->-1 + -2->0 + -1->-0} is sat
-    {traces and eventually Game.red == -2->-1 + -2->0 + -2->1 + -1->-1} is sat
-    {traces and eventually Game.red == -2->-1 + -2->0 + -2->1 + -1->1} is sat
-} */
+  // canWinTwoTurns: {traces and next_state next_state some p: Player | isWinner[p]} for 2 Int is sat
+  // redCanWin: {traces and eventually isWinner[Red]} for 2 Int is sat
+  // blueCanWin: {traces and eventually isWinner[Blue]} for 2 Int is sat
+  // noLShapeOverconstraints:
+  //  {traces and eventually Game.red == -2->-2 + -2->-1 + -2->0 + -1->-2} is sat
+  //  {traces and eventually Game.red == -2->-2 + -2->-1 + -2->0 + -1->-0} is sat
+  //  {traces and eventually Game.red == -2->-1 + -2->0 + -2->1 + -1->-1} is sat
+  //  {traces and eventually Game.red == -2->-1 + -2->0 + -2->1 + -1->1} is sat
+}
 
 run { traces } for 2 Int
