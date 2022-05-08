@@ -51,15 +51,11 @@ pred colAdjacent[r1, c1, r2, c2: Int] {
 
 pred isLShape[r1, c1, r2, c2, r3, c3, r4, c4: Int] {
   {
-    colAdjacent[r1, c1, r2, c2]
-    colAdjacent[r2, c2, r3, c3]
-    rowAdjacent[r3, c3, r4, c4]
-    c1 != c3 
+    (rowAdjacent[r3, c3, r4, c4] or rowAdjacent[r1, c1, r4, c4])
+    (c1 = -2 and c2 = -1 and c3 = 0) or (c1 = -1 and c2 = 0 and c3 = 1)
   } or {
-    rowAdjacent[r1, c1, r2, c2]
-    rowAdjacent[r2, c2, r3, c3]
-    colAdjacent[r3, c3, r4, c4]
-    r1 != r3
+    (colAdjacent[r3, c3, r4, c4] or colAdjacent[r1, c1, r4, c4])
+    (r1 = -2 and r2 = -1 and r3 = 0) or (r1 = -1 and r2 = 0 and r3 = 1)
   }
 }
 
@@ -122,6 +118,20 @@ pred trans[r1, c1, r2, c2, r3, c3, r4, c4: Int] {
   }
 }
 
+pred suddenDeathTrans[r1, c1, r2, c2, r3, c3, r4, c4: Int] {
+  validMove[r1, c1, r2, c2, r3, c3, r4, c4]
+  let L = r1->c1 + r2->c2 + r3->c3 + r4->c4 | {
+    Game.turn = Red => {
+      Game.red' = L
+      blue' = blue
+    } else {
+      Game.blue' = L
+      red' = red
+    }
+    turn' != turn
+  }
+}
+
 pred doNothing {
   -- the game is over, so nothing changes
   red' = red
@@ -142,6 +152,18 @@ pred traces {
   }
 }
 
+pred suddenDeathTraces {
+  init
+  wellFormed
+  always {
+    canMove => {
+      some r1, c1, r2, c2, r3, c3, r4, c4: Int | {
+          suddenDeathTrans[r1, c1, r2, c2, r3, c3, r4, c4]
+      }
+    } else doNothing
+  }
+}
+
 ---- Testing ----
 
 pred noNeutralMoves {
@@ -155,7 +177,7 @@ pred noNeutralMoves {
 // the theorem tests take minutes to run, recommend commenting out/singling out when testing theorem
 test expect {
   -- translate: 20s, solve: <0.1s
-  //vacuity: {traces} for 2 Int is sat
+  vacuity: {traces} for 2 Int is sat
   -- translate: 4s, solve: <0.1s (implies not and?? better runtime but is this what we want?)
   //canEndGame: {traces implies eventually doNothing} for 2 Int is sat
   -- translate: 5s, solve: <0.1s (implies not and?? better runtime but is this what we want?)
@@ -186,6 +208,7 @@ test expect {
     -- botttom left corner
     {traces and eventually Game.red == 0->1 + 1->1 + 1->0 + 1->-1} for 2 Int is sat
     {traces and eventually Game.red == 1->-1 + 1->-2 + 0->-2 + 1->-2} for 2 Int is sat */
+    /// tests for sudden death trans
 }
 
-//run { traces } for 2 Int
+run { traces } for 2 Int
