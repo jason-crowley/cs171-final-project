@@ -15,19 +15,23 @@ one sig Game {
 
 // Game board is indexed from -2 to 1 to avoid overflow
 pred init {
+  -- red L starting position
   Game.red =
     -2 -> -1 +
     -2 ->  0 +
     -1 ->  0 +
     0 ->  0
+  -- blue L starting position
   Game.blue =
     1 ->  0 +
     1 -> -1 +
     0 -> -1 +
     -1 -> -1
+  -- netural pieces starting positions
   Game.neutral =
     -2 -> -2 +
     1 ->  1
+  -- red player takes the first move
   Game.turn = Red
 }
 
@@ -119,6 +123,7 @@ pred trans[r1, c1, r2, c2, r3, c3, r4, c4: Int] {
 }
 
 pred doNothing {
+  -- the game is over, so nothing changes
   red' = red
   blue' = blue
   neutral' = neutral
@@ -130,8 +135,9 @@ pred traces {
   wellFormed
   always {
     canMove => {
-      some r1, c1, r2, c2, r3, c3, r4, c4: Int |
+      some r1, c1, r2, c2, r3, c3, r4, c4: Int | {
         trans[r1, c1, r2, c2, r3, c3, r4, c4]
+      }
     } else doNothing
   }
 }
@@ -148,19 +154,38 @@ pred noNeutralMoves {
 
 // the theorem tests take minutes to run, recommend commenting out/singling out when testing theorem
 test expect {
-  vacuity: {traces} for 2 Int is sat
-  canEndGame: {traces implies eventually doNothing} for 2 Int is sat
-  canPlayInfinite: {traces implies always canMove} for 2 Int is sat
-  // noWinUnlessNeutralMove: {(traces and noNeutralMoves) implies always canMove} for 2 Int is theorem
-  // noWinOneTurn: {traces implies next_state canMove} for 2 Int is theorem
-  // canWinTwoTurns: {traces and next_state next_state some p: Player | isWinner[p]} for 2 Int is sat
-  // redCanWin: {traces and eventually isWinner[Red]} for 2 Int is sat
-  // blueCanWin: {traces and eventually isWinner[Blue]} for 2 Int is sat
-  // noLShapeOverconstraints:
-  //  {traces and eventually Game.red == -2->-2 + -2->-1 + -2->0 + -1->-2} is sat
-  //  {traces and eventually Game.red == -2->-2 + -2->-1 + -2->0 + -1->-0} is sat
-  //  {traces and eventually Game.red == -2->-1 + -2->0 + -2->1 + -1->-1} is sat
-  //  {traces and eventually Game.red == -2->-1 + -2->0 + -2->1 + -1->1} is sat
+  -- translate: 20s, solve: <0.1s
+  //vacuity: {traces} for 2 Int is sat
+  -- translate: 4s, solve: <0.1s (implies not and?? better runtime but is this what we want?)
+  //canEndGame: {traces implies eventually doNothing} for 2 Int is sat
+  -- translate: 5s, solve: <0.1s (implies not and?? better runtime but is this what we want?)
+  //canPlayInfinite: {traces implies always canMove} for 2 Int is sat
+  -- translate: 174s (109s with symmetry-breaking), solve: <0.1s 
+  //noWinUnlessNeutralMove: {(traces and noNeutralMoves) implies always canMove} for 2 Int is theorem
+  -- translate: 197s, solve: <0.1s
+  //noWinOneTurn: {traces implies next_state canMove} for 2 Int is theorem
+  -- translate: 22s, solve: <0.1s
+  //canWinTwoTurns: {traces and next_state next_state (some p: Player | isWinner[p])} for 2 Int is sat
+  -- translate: 33s, solve: 0.2s
+  //redCanWin: {traces and eventually isWinner[Red]} for 2 Int is sat
+  -- translate: 22s, solve: 0.2s
+  //blueCanWin: {traces and eventually isWinner[Blue]} for 2 Int is sat
+  -- translate: 171s, solve: 4s
+  //sameTurnNotGameOver: {traces implies always (canMove => turn' != turn)} for 2 Int is theorem
+  /* LinCorners:
+    -- top left corner
+    -- translate: 119s, solve: 0.6s
+    {traces and eventually Game.red = -2->-1 + -2->-2 + -1->-2 + 0->-2} for 2 Int is sat
+    {traces and eventually Game.red == -1->-2 + -2->-2 + -2->-1 + -2->0} for 2 Int is sat
+    -- top right corner
+    {traces and eventually Game.red == -1->1 + -2->1 + -2->0 + -2->-1} for 2 Int is sat
+    {traces and eventually Game.red == -2->0 + -2->1 + -1->1 + 0->1} for 2 Int is sat
+    -- bottom right corner
+    {traces and eventually Game.red == 1->0 + 1->1 + 0->1 + -1->1} for 2 Int is sat
+    {traces and eventually Game.red == 0->-2 + 1->-2 + 1->-1 + 1->0} for 2 Int is sat
+    -- botttom left corner
+    {traces and eventually Game.red == 0->1 + 1->1 + 1->0 + 1->-1} for 2 Int is sat
+    {traces and eventually Game.red == 1->-1 + 1->-2 + 0->-2 + 1->-2} for 2 Int is sat */
 }
 
-run { traces } for 2 Int
+//run { traces } for 2 Int
