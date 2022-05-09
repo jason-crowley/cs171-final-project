@@ -178,10 +178,18 @@ pred noNeutralMoves {
   }
 }
 
+/*pred bad {
+  eventually always ((Game.red != -2->-1 + -2->0 + -1->0 + 0->0) and (Game.blue != 1->0 + 1->-1 + 0->-1 + -1->-1))
+}*/
+
+pred twoNeutral {
+  all a,b : Int | {a->b in Game.neutral implies a->b not in Game.neutral'}
+}
+
 // the theorem tests take minutes to run, recommend commenting out/singling out when testing theorem
 test expect {
   -- translate: 20s, solve: <0.1s
-  vacuity: {traces} for 2 Int is sat
+  //vacuity: {traces} for 2 Int is sat
   -- translate: 4s, solve: <0.1s (implies not and?? better runtime but is this what we want?)
   //canEndGame: {traces and eventually doNothing} for 2 Int is sat
   -- translate: 5s, solve: <0.1s (implies not and?? better runtime but is this what we want?)
@@ -212,7 +220,11 @@ test expect {
     -- botttom left corner
     {traces and eventually Game.red == 0->1 + 1->1 + 1->0 + 1->-1} for 2 Int is sat
     {traces and eventually Game.red == 1->-1 + 1->-2 + 0->-2 + 1->-2} for 2 Int is sat */
-    /// tests for sudden death trans
+  
+    //suddenDeathVacuity: {suddenDeathTraces} for 2 Int is sat
+    //suddenDeathNoNeutralMoves: {suddenDeathTraces and neutral' = neutral} for 2 Int is sat
+    //suddenDeathOneNeutralMove: {suddenDeathTraces and lone neutral' - neutral} for 2 Int is sat
+    //suddenDeathTwoNeutralMoves: {suddenDeathTraces and twoNeutral} for 2 Int is sat
 }
 
 run { traces } for 2 Int
