@@ -20,17 +20,17 @@ pred init {
     -2 -> -1 +
     -2 ->  0 +
     -1 ->  0 +
-    0 ->  0
+     0 ->  0
   -- blue L starting position
   Game.blue =
-    1 ->  0 +
-    1 -> -1 +
-    0 -> -1 +
+     1 ->  0 +
+     1 -> -1 +
+     0 -> -1 +
     -1 -> -1
   -- netural pieces starting positions
   Game.neutral =
     -2 -> -2 +
-    1 ->  1
+     1 ->  1
   -- red player takes the first move
   Game.turn = Red
 }
@@ -54,7 +54,7 @@ pred isLShape[r1, c1, r2, c2, r3, c3, r4, c4: Int] {
     colAdjacent[r1, c1, r2, c2]
     colAdjacent[r2, c2, r3, c3]
     rowAdjacent[r3, c3, r4, c4]
-    c1 != c3 
+    c1 != c3
   } or {
     rowAdjacent[r1, c1, r2, c2]
     rowAdjacent[r2, c2, r3, c3]
@@ -166,7 +166,7 @@ pred suddenDeathTraces {
   always {
     canMove => {
       some r1, c1, r2, c2, r3, c3, r4, c4: Int | {
-          suddenDeathTrans[r1, c1, r2, c2, r3, c3, r4, c4]
+        suddenDeathTrans[r1, c1, r2, c2, r3, c3, r4, c4]
       }
     } else doNothing
   }
@@ -178,8 +178,8 @@ pred suddenDeathTraces {
 pred noNeutralMoves {
   always {
     Game.neutral =
-     1 -> -2 +
-    -2 ->  1
+       1 -> -2 +
+      -2 ->  1
   }
 }
 
@@ -195,11 +195,11 @@ test expect {
   -- the game can end (there can be a winner)
   -- translate: 18s, solve: <0.1s
   //canEndGame: {traces and eventually doNothing} for 2 Int is sat
-  -- the game can never end 
+  -- the game can never end
   -- translate: 37s, solve: <0.1s
   //canPlayInfinite: {traces and always canMove} for 2 Int is sat
   -- there can't be a winner without a neutral piece being moved
-  -- translate: 174s (109s with symmetry-breaking), solve: <0.1s 
+  -- translate: 174s (109s with symmetry-breaking), solve: <0.1s
   //noWinUnlessNeutralMove: {(traces and noNeutralMoves) implies always canMove} for 2 Int is theorem
   -- can't win on the first turn
   -- translate: 197s, solve: <0.1s
@@ -242,9 +242,9 @@ test expect {
     {traces and eventually Game.red = 0->1 + 1->1 + 1->0 + 1->-1} for 2 Int is sat
     -- translate: 65s, solve: 2s
     {traces and eventually Game.red = 1->-1 + 1->-2 + 0->-2 + -1->-2} for 2 Int is sat */
-  
 
-  -- SUDDEN DEATH VARIANT TESTS 
+
+  -- SUDDEN DEATH VARIANT TESTS
 
   -- translate: 18s, solve: 0.2s
   //suddenDeathVacuity: {suddenDeathTraces} for 2 Int is sat
