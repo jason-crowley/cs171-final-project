@@ -178,14 +178,14 @@ pred suddenDeathTraces {
 pred noNeutralMoves {
   always {
     Game.neutral =
-       1 -> -2 +
-      -2 ->  1
+      -2 -> -2 +
+       1 ->  1
   }
 }
 
 // for sudden death two neutral test
 pred twoNeutral {
-  all a,b : Int | {a->b in Game.neutral implies a->b not in Game.neutral'}
+  no neutral & neutral'
 }
 
 // the theorem tests take minutes to run, recommend commenting out/singling out when testing theorem
@@ -198,8 +198,11 @@ test expect {
   -- the game can never end
   -- translate: 37s, solve: <0.1s
   //canPlayInfinite: {traces and always canMove} for 2 Int is sat
+  -- a player can choose to move no neutral piece
+  -- translate: 33s, solve: <0.1s
+  //noNeutralMoveVacuity: {traces noNeutralMoves} for 2 Int is sat
   -- there can't be a winner without a neutral piece being moved
-  -- translate: 174s (109s with symmetry-breaking), solve: <0.1s
+  -- translate: 221s (109s with symmetry-breaking), solve: 2s
   //noWinUnlessNeutralMove: {(traces and noNeutralMoves) implies always canMove} for 2 Int is theorem
   -- can't win on the first turn
   -- translate: 197s, solve: <0.1s
