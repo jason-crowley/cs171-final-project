@@ -122,24 +122,6 @@ pred trans[r1, c1, r2, c2, r3, c3, r4, c4: Int] {
   }
 }
 
--- sudden death variant: players can move both neutral pieces instead of at most one
-pred suddenDeathTrans[r1, c1, r2, c2, r3, c3, r4, c4: Int] {
-  validMove[r1, c1, r2, c2, r3, c3, r4, c4]
-  let L = r1->c1 + r2->c2 + r3->c3 + r4->c4 | {
-    Game.turn = Red => {
-      Game.red' = L
-      blue' = blue
-    } else {
-      Game.blue' = L
-      red' = red
-    }
-    turn' != turn
-    some r5, c5, r6, c6: Int | {
-      Game.neutral' = r5->c5 + r6->c6
-    }
-  }
-}
-
 pred doNothing {
   -- the game is over, so nothing changes
   red' = red
@@ -160,6 +142,24 @@ pred traces {
   }
 }
 
+-- sudden death variant: players can move both neutral pieces instead of at most one
+pred suddenDeathTrans[r1, c1, r2, c2, r3, c3, r4, c4: Int] {
+  validMove[r1, c1, r2, c2, r3, c3, r4, c4]
+  let L = r1->c1 + r2->c2 + r3->c3 + r4->c4 | {
+    Game.turn = Red => {
+      Game.red' = L
+      blue' = blue
+    } else {
+      Game.blue' = L
+      red' = red
+    }
+    turn' != turn
+    some r5, c5, r6, c6: Int | {
+      Game.neutral' = r5->c5 + r6->c6
+    }
+  }
+}
+
 pred suddenDeathTraces {
   init
   wellFormed
@@ -174,6 +174,7 @@ pred suddenDeathTraces {
 
 ---- Testing ----
 
+// for no neutral moves tests
 pred noNeutralMoves {
   always {
     Game.neutral =
@@ -182,31 +183,34 @@ pred noNeutralMoves {
   }
 }
 
-/*pred bad {
-  eventually always ((Game.red != -2->-1 + -2->0 + -1->0 + 0->0) and (Game.blue != 1->0 + 1->-1 + 0->-1 + -1->-1))
-}*/
-
+// for sudden death two neutral test
 pred twoNeutral {
   all a,b : Int | {a->b in Game.neutral implies a->b not in Game.neutral'}
 }
 
 // the theorem tests take minutes to run, recommend commenting out/singling out when testing theorem
 test expect {
-
   -- translate: 21s, solve: <0.1s
   //vacuity: {traces} for 2 Int is sat
+  -- the game can end (there can be a winner)
   -- translate: 18s, solve: <0.1s
   //canEndGame: {traces and eventually doNothing} for 2 Int is sat
+  -- the game can never end 
   -- translate: 37s, solve: <0.1s
   //canPlayInfinite: {traces and always canMove} for 2 Int is sat
+  -- there can't be a winner without a neutral piece being moved
   -- translate: 174s (109s with symmetry-breaking), solve: <0.1s 
   //noWinUnlessNeutralMove: {(traces and noNeutralMoves) implies always canMove} for 2 Int is theorem
+  -- can't win on the first turn
   -- translate: 197s, solve: <0.1s
   //noWinOneTurn: {traces implies next_state canMove} for 2 Int is theorem
+  -- can win in two turns
   -- translate: 22s, solve: <0.1s
   //canWinTwoTurns: {traces and next_state next_state (some p: Player | isWinner[p])} for 2 Int is sat
+  -- red can win
   -- translate: 33s, solve: 0.2s
   //redCanWin: {traces and eventually isWinner[Red]} for 2 Int is sat
+  -- blue can win
   -- translate: 22s, solve: 0.2s
   //blueCanWin: {traces and eventually isWinner[Blue]} for 2 Int is sat
   -- if the game is not over, no one can move twice in a row
@@ -219,23 +223,24 @@ test expect {
   -- for each: translate: ~20-50s, solve: <0.5s
   /* redLinCorners:
     -- TOP LEFT CORNER
+    -- translate: 62s, solve: 2.2s
     {traces and eventually Game.red = -2->-1 + -2->-2 + -1->-2 + 0->-2} for 2 Int is sat
-    -- translate: s, solve: s
+    -- translate: 74s, solve: 4.1s
     {traces and eventually Game.red = -1->-2 + -2->-2 + -2->-1 + -2->0} for 2 Int is sat
     -- TOP RIGHT CORNER
-    -- translate: s, solve: s
+    -- translate: 33s, solve: 1.1s
     {traces and eventually Game.red = -1->1 + -2->1 + -2->0 + -2->-1} for 2 Int is sat
-    -- translate: s, solve: s
+    -- translate: 33s, solve: 0.9s
     {traces and eventually Game.red = -2->0 + -2->1 + -1->1 + 0->1} for 2 Int is sat
     -- BOTTOM RIGHT CORNER
-    -- translate: s, solve: s
+    -- translate: 66s, solve: 2.6s
     {traces and eventually Game.red = 1->0 + 1->1 + 0->1 + -1->1} for 2 Int is sat
-    -- translate: s, solve: s
+    -- translate: 64s, solve: 2.5s
     {traces and eventually Game.red = 0->-2 + 1->-2 + 1->-1 + 1->0} for 2 Int is sat
     -- BOTTOM LEFT CORNER
-    -- translate: s, solve: s
+    -- translate: 63s, solve: 2.8s
     {traces and eventually Game.red = 0->1 + 1->1 + 1->0 + 1->-1} for 2 Int is sat
-    -- translate: s, solve: s
+    -- translate: 65s, solve: 2s
     {traces and eventually Game.red = 1->-1 + 1->-2 + 0->-2 + -1->-2} for 2 Int is sat */
   
 
