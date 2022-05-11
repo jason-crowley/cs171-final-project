@@ -256,6 +256,8 @@ inst CellsAndLs {
   )
 }
 
+
+-- CellsandLs Tests
 test expect {
   -- translate: <0.1s, solve: <0.1s
   // allCells: {
@@ -272,7 +274,8 @@ test expect {
   // } for 2 Int for CellsAndLs is sat
 }
 
-// the theorem tests take minutes to run, recommend commenting out/singling out when testing theorem
+
+-- Standard Game Tests 
 test expect {
   -- translate: 0.7s, solve: <0.1s
   // vacuity: {traces} for 2 Int for CellsAndLs is sat
@@ -306,32 +309,11 @@ test expect {
   -- once the game ends (nobody takes a move during that turn) the game is permanently over (no further moves will be taken)
   -- translate: 2.7s, solve: 291s
   // permanentlyOver: {traces implies always (doNothing implies always doNothing)} for 2 Int for CellsAndLs is theorem
-  -- checking for overconstraints in isLShape by testing if the red L can be in all of the corner orientations
-  /* redLinCorners:
-    -- TOP LEFT CORNER
-    -- translate: 1.4s, solve: 0.2s
-    {traces and eventually cells[Game.red] = -2->-1 + -2->-2 + -1->-2 + 0->-2} for 2 Int for CellsAndLs is sat
-    -- translate: 1.3s, solve: 0.4s
-    {traces and eventually cells[Game.red] = -1->-2 + -2->-2 + -2->-1 + -2->0} for 2 Int for CellsAndLs is sat
-    -- TOP RIGHT CORNER
-    -- translate: 0.9s, solve: <0.1s
-    {traces and eventually cells[Game.red] = -1->1 + -2->1 + -2->0 + -2->-1} for 2 Int for CellsAndLs is sat
-    -- translate: 0.9s, solve: <0.1s
-    {traces and eventually cells[Game.red] = -2->0 + -2->1 + -1->1 + 0->1} for 2 Int for CellsAndLs is sat
-    -- BOTTOM RIGHT CORNER
-    -- translate: 1.4s, solve: 0.3s
-    {traces and eventually cells[Game.red] = 1->0 + 1->1 + 0->1 + -1->1} for 2 Int for CellsAndLs is sat
-    -- translate: 1.4s, solve: 0.3s
-    {traces and eventually cells[Game.red] = 0->-2 + 1->-2 + 1->-1 + 1->0} for 2 Int for CellsAndLs is sat
-    -- BOTTOM LEFT CORNER
-    -- translate: 0.2s, solve: 0.2s
-    {traces and eventually cells[Game.red] = 0->1 + 1->1 + 1->0 + 1->-1} for 2 Int for CellsAndLs is sat
-    -- translate: 0.3s, solve: 0.3s
-    {traces and eventually cells[Game.red] = 1->-1 + 1->-2 + 0->-2 + -1->-2} for 2 Int for CellsAndLs is sat */
+}
 
 
-  -- SUDDEN DEATH VARIANT TESTS
-
+-- Sudden Death Variant Tests
+test expect {
   -- translate: 0.9s, solve: 0.2s
   // suddenDeathVacuity: {suddenDeathTraces} for 2 Int for CellsAndLs is sat
   -- translate: 0.7s, solve: <0.1s
@@ -343,6 +325,9 @@ test expect {
   -- translate: 2.8s, solve: 0.3s
   // suddenDeathNoWinOneTurn: {suddenDeathTraces implies next_state canMove} for 2 Int for CellsAndLs is theorem
 }
+
+
+---- Run Statements ----
 
 -- trace with a winner
 -- generation time: 1s
