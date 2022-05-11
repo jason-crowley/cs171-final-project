@@ -6,23 +6,35 @@ option max_tracelength 10
 abstract sig Player {}
 one sig Red, Blue extends Player {}
 
+sig Cell {
+  r: one Int,
+  c: one Int
+}
+
+sig L {}
+
 one sig Game {
-  var red: set Int -> Int,
-  var blue: set Int -> Int,
+  Ls: set L -> Cell,
+  var red: one L,
+  var blue: one L,
   var neutral: set Int -> Int,
   var turn: one Player
+}
+
+fun cells[l: one L]: set Int->Int {
+  {row, col: Int | (some cell: Game.Ls[l] | cell.r = row and cell.c = col)}
 }
 
 // Game board is indexed from -2 to 1 to avoid overflow
 pred init {
   -- red L starting position
-  Game.red =
+  cells[Game.red] =
     -2 -> -1 +
     -2 ->  0 +
     -1 ->  0 +
      0 ->  0
   -- blue L starting position
-  Game.blue =
+  cells[Game.blue] =
      1 ->  0 +
      1 -> -1 +
      0 -> -1 +
@@ -65,61 +77,43 @@ pred isLShape[r1, c1, r2, c2, r3, c3, r4, c4: Int] {
 
 pred wellFormed {
   always {
-    #red = 4
-    #blue = 4
     #neutral = 2
 
-    no red & blue
-    no red & neutral
-    no blue & neutral
-
-    some r1, c1, r2, c2, r3, c3, r4, c4: Int | {
-      Game.red = r1->c1 + r2->c2 + r3->c3 + r4->c4
-      isLShape[r1, c1, r2, c2, r3, c3, r4, c4]
-    }
-
-    some r1, c1, r2, c2, r3, c3, r4, c4: Int | {
-      Game.blue = r1->c1 + r2->c2 + r3->c3 + r4->c4
-      isLShape[r1, c1, r2, c2, r3, c3, r4, c4]
-    }
+    no cells[Game.red] & cells[Game.blue]
+    no cells[Game.red] & Game.neutral
+    no cells[Game.blue] & Game.neutral
   }
 }
 
-pred validMove[r1, c1, r2, c2, r3, c3, r4, c4: Int] {
-  isLShape[r1, c1, r2, c2, r3, c3, r4, c4]
-  let L = r1->c1 + r2->c2 + r3->c3 + r4->c4 | {
-    Game.turn = Red => {
-      L != Game.red
-      L in Int->Int - Game.(blue + neutral)
-    } else {
-      L != Game.blue
-      L in Int->Int - Game.(red + neutral)
-    }
+pred validMove[l: one L] {
+  Game.turn = Red => {
+    l != Game.red
+    cells[l] in Int->Int - (cells[Game.blue] + Game.neutral)
+  } else {
+    l != Game.blue
+    cells[l] in Int->Int - (cells[Game.red] + Game.neutral)
   }
 }
 
 pred canMove {
-  some r1, c1, r2, c2, r3, c3, r4, c4: Int |
-    validMove[r1, c1, r2, c2, r3, c3, r4, c4]
+  some l: L | validMove[l]
 }
 
 pred isWinner[p: Player] {
   Game.turn != p and not canMove
 }
 
-pred trans[r1, c1, r2, c2, r3, c3, r4, c4: Int] {
-  validMove[r1, c1, r2, c2, r3, c3, r4, c4]
-  let L = r1->c1 + r2->c2 + r3->c3 + r4->c4 | {
-    Game.turn = Red => {
-      Game.red' = L
-      blue' = blue
-    } else {
-      Game.blue' = L
-      red' = red
-    }
-    lone neutral' - neutral
-    turn' != turn
+pred trans[l: one L] {
+  validMove[l]
+  Game.turn = Red => {
+    Game.red' = l
+    blue' = blue
+  } else {
+    Game.blue' = l
+    red' = red
   }
+  lone neutral' - neutral
+  turn' != turn
 }
 
 pred doNothing {
@@ -135,28 +129,24 @@ pred traces {
   wellFormed
   always {
     canMove => {
-      some r1, c1, r2, c2, r3, c3, r4, c4: Int | {
-        trans[r1, c1, r2, c2, r3, c3, r4, c4]
-      }
+      some l: L | trans[l]
     } else doNothing
   }
 }
 
 -- sudden death variant: players can move both neutral pieces instead of at most one
-pred suddenDeathTrans[r1, c1, r2, c2, r3, c3, r4, c4: Int] {
-  validMove[r1, c1, r2, c2, r3, c3, r4, c4]
-  let L = r1->c1 + r2->c2 + r3->c3 + r4->c4 | {
-    Game.turn = Red => {
-      Game.red' = L
-      blue' = blue
-    } else {
-      Game.blue' = L
-      red' = red
-    }
-    turn' != turn
-    some r5, c5, r6, c6: Int | {
-      Game.neutral' = r5->c5 + r6->c6
-    }
+pred suddenDeathTrans[l: one L] {
+  validMove[l]
+  Game.turn = Red => {
+    Game.red' = l
+    blue' = blue
+  } else {
+    Game.blue' = l
+    red' = red
+  }
+  turn' != turn
+  some r5, c5, r6, c6: Int | {
+    Game.neutral' = r5->c5 + r6->c6
   }
 }
 
@@ -165,9 +155,7 @@ pred suddenDeathTraces {
   wellFormed
   always {
     canMove => {
-      some r1, c1, r2, c2, r3, c3, r4, c4: Int | {
-        suddenDeathTrans[r1, c1, r2, c2, r3, c3, r4, c4]
-      }
+      some l: L | suddenDeathTrans[l]
     } else doNothing
   }
 }
@@ -188,99 +176,194 @@ pred twoNeutral {
   no neutral & neutral'
 }
 
+inst CellsAndLs {
+  Cell =
+    `C00 + `C01 + `C02 + `C03 +
+    `C10 + `C11 + `C12 + `C13 +
+    `C20 + `C21 + `C22 + `C23 +
+    `C30 + `C31 + `C32 + `C33
+  r =
+    `C00->-2 + `C01->-2 + `C02->-2 + `C03->-2 +
+    `C10->-1 + `C11->-1 + `C12->-1 + `C13->-1 +
+    `C20-> 0 + `C21-> 0 + `C22-> 0 + `C23-> 0 +
+    `C30-> 1 + `C31-> 1 + `C32-> 1 + `C33-> 1
+  c =
+    `C00->-2 + `C01->-1 + `C02-> 0 + `C03-> 1 +
+    `C10->-2 + `C11->-1 + `C12-> 0 + `C13-> 1 +
+    `C20->-2 + `C21->-1 + `C22-> 0 + `C23-> 1 +
+    `C30->-2 + `C31->-1 + `C32-> 0 + `C33-> 1
+  Game = `G
+  L = `L00 + `L01 + `L02 + `L03 + `L04 + `L05 + `L06 + `L07 + `L08 + `L09 + `L10 + `L11 + `L12 + `L13 + `L14 + `L15 + `L16 + `L17 + `L18 + `L19 + `L20 + `L21 + `L22 + `L23 + `L24 + `L25 + `L26 + `L27 + `L28 + `L29 + `L30 + `L31 + `L32 + `L33 + `L34 + `L35 + `L36 + `L37 + `L38 + `L39 + `L40 + `L41 + `L42 + `L43 + `L44 + `L45 + `L46 + `L47
+  Ls = `G->(
+    -- normal Ls
+    `L00->(`C00 + `C10 + `C20 + `C21) +
+    `L01->(`C01 + `C11 + `C21 + `C22) +
+    `L02->(`C02 + `C12 + `C22 + `C23) +
+    `L03->(`C10 + `C20 + `C30 + `C31) +
+    `L04->(`C11 + `C21 + `C31 + `C32) +
+    `L05->(`C12 + `C22 + `C32 + `C33) +
+    -- upside-down Ls
+    `L06->(`C20 + `C10 + `C00 + `C01) +
+    `L07->(`C21 + `C11 + `C01 + `C02) +
+    `L08->(`C22 + `C12 + `C02 + `C03) +
+    `L09->(`C30 + `C20 + `C10 + `C11) +
+    `L10->(`C31 + `C21 + `C11 + `C12) +
+    `L11->(`C32 + `C22 + `C12 + `C13) +
+    -- backwards Ls
+    `L12->(`C01 + `C11 + `C21 + `C20) +
+    `L13->(`C02 + `C12 + `C22 + `C21) +
+    `L14->(`C03 + `C13 + `C23 + `C22) +
+    `L15->(`C11 + `C21 + `C31 + `C30) +
+    `L16->(`C12 + `C22 + `C32 + `C31) +
+    `L17->(`C13 + `C23 + `C33 + `C32) +
+    -- backwards upside-down Ls
+    `L18->(`C01 + `C11 + `C21 + `C00) +
+    `L19->(`C02 + `C12 + `C22 + `C01) +
+    `L20->(`C03 + `C13 + `C23 + `C02) +
+    `L21->(`C11 + `C21 + `C31 + `C10) +
+    `L22->(`C12 + `C22 + `C32 + `C11) +
+    `L23->(`C13 + `C23 + `C33 + `C12) +
+
+    -- everything above transposed
+    -- normal Ls
+    `L24->(`C00 + `C01 + `C02 + `C12) +
+    `L25->(`C10 + `C11 + `C12 + `C22) +
+    `L26->(`C20 + `C21 + `C22 + `C32) +
+    `L27->(`C01 + `C02 + `C03 + `C13) +
+    `L28->(`C11 + `C12 + `C13 + `C23) +
+    `L29->(`C21 + `C22 + `C23 + `C33) +
+    -- upside-down Ls
+    `L30->(`C02 + `C01 + `C00 + `C10) +
+    `L31->(`C12 + `C11 + `C10 + `C20) +
+    `L32->(`C22 + `C21 + `C20 + `C30) +
+    `L33->(`C03 + `C02 + `C01 + `C11) +
+    `L34->(`C13 + `C12 + `C11 + `C21) +
+    `L35->(`C23 + `C22 + `C21 + `C31) +
+    -- backwards Ls
+    `L36->(`C10 + `C11 + `C12 + `C02) +
+    `L37->(`C20 + `C21 + `C22 + `C12) +
+    `L38->(`C30 + `C31 + `C32 + `C22) +
+    `L39->(`C11 + `C12 + `C13 + `C03) +
+    `L40->(`C21 + `C22 + `C23 + `C13) +
+    `L41->(`C31 + `C32 + `C33 + `C23) +
+    -- backwards upside-down Ls
+    `L42->(`C10 + `C11 + `C12 + `C00) +
+    `L43->(`C20 + `C21 + `C22 + `C10) +
+    `L44->(`C30 + `C31 + `C32 + `C20) +
+    `L45->(`C11 + `C12 + `C13 + `C01) +
+    `L46->(`C21 + `C22 + `C23 + `C11) +
+    `L47->(`C31 + `C32 + `C33 + `C21)
+  )
+}
+
+test expect {
+  -- translate: <0.1s, solve: <0.1s
+  // allCells: {
+  //   all row, col: Int | one cell: Cell | cell.r = row and cell.c = col
+  // } for 2 Int for CellsAndLs is sat
+
+  -- translate: 3.2s, solve: <0.1s
+  // allLs: {
+  //   all cell1, cell2, cell3, cell4: Cell | {
+  //     isLShape[cell1.r, cell1.c, cell2.r, cell2.c, cell3.r, cell3.c, cell4.r, cell4.c] => {
+  //       one l: L | Game.Ls[l] = cell1 + cell2 + cell3 + cell4
+  //     }
+  //   }
+  // } for 2 Int for CellsAndLs is sat
+}
+
 // the theorem tests take minutes to run, recommend commenting out/singling out when testing theorem
 test expect {
-  -- translate: 21s, solve: <0.1s
-  //vacuity: {traces} for 2 Int is sat
+  -- translate: 0.7s, solve: <0.1s
+  // vacuity: {traces} for 2 Int for CellsAndLs is sat
   -- the game can end (there can be a winner)
-  -- translate: 18s, solve: <0.1s
-  //canEndGame: {traces and eventually doNothing} for 2 Int is sat
+  -- translate: 0.8s, solve: <0.1s
+  // canEndGame: {traces and eventually doNothing} for 2 Int for CellsAndLs is sat
   -- the game can never end
-  -- translate: 37s, solve: <0.1s
-  //canPlayInfinite: {traces and always canMove} for 2 Int is sat
+  -- translate: 1s, solve: <0.1s
+  // canPlayInfinite: {traces and always canMove} for 2 Int for CellsAndLs is sat
   -- a player can choose to move no neutral piece
-  -- translate: 33s, solve: <0.1s
-  //noNeutralMoveVacuity: {traces noNeutralMoves} for 2 Int is sat
+  -- translate: 1s, solve: <0.1s
+  // noNeutralMoveVacuity: {traces noNeutralMoves} for 2 Int for CellsAndLs is sat
   -- there can't be a winner without a neutral piece being moved
-  -- translate: 221s (109s with symmetry-breaking), solve: 2s
-  //noWinUnlessNeutralMove: {(traces and noNeutralMoves) implies always canMove} for 2 Int is theorem
+  -- translate: 3s, solve: 1.3s
+  // noWinUnlessNeutralMove: {(traces and noNeutralMoves) implies always canMove} for 2 Int for CellsAndLs is theorem
   -- can't win on the first turn
-  -- translate: 197s, solve: <0.1s
-  //noWinOneTurn: {traces implies next_state canMove} for 2 Int is theorem
+  -- translate: 3.4s, solve: <0.1s
+  // noWinOneTurn: {traces implies next_state canMove} for 2 Int for CellsAndLs is theorem
   -- can win in two turns
-  -- translate: 22s, solve: <0.1s
-  //canWinTwoTurns: {traces and next_state next_state (some p: Player | isWinner[p])} for 2 Int is sat
+  -- translate: 0.9s, solve: <0.1s
+  // canWinTwoTurns: {traces and next_state next_state (some p: Player | isWinner[p])} for 2 Int for CellsAndLs is sat
   -- red can win
-  -- translate: 33s, solve: 0.2s
-  //redCanWin: {traces and eventually isWinner[Red]} for 2 Int is sat
+  -- translate: 1s, solve: 0.2s
+  // redCanWin: {traces and eventually isWinner[Red]} for 2 Int for CellsAndLs is sat
   -- blue can win
-  -- translate: 22s, solve: 0.2s
-  //blueCanWin: {traces and eventually isWinner[Blue]} for 2 Int is sat
+  -- translate: 0.8s, solve: <0.1s
+  // blueCanWin: {traces and eventually isWinner[Blue]} for 2 Int for CellsAndLs is sat
   -- if the game is not over, no one can move twice in a row
-  -- translate: 171s, solve: 4s
-  //sameTurnNotGameOver: {traces implies always (canMove => turn' != turn)} for 2 Int is theorem
+  -- translate: 2.8s, solve: 26.3s
+  // sameTurnNotGameOver: {traces implies always (canMove => turn' != turn)} for 2 Int for CellsAndLs is theorem
   -- once the game ends (nobody takes a move during that turn) the game is permanently over (no further moves will be taken)
-  -- translate: 166s, solve: 55s
-  //permanentlyOver: {traces implies always (doNothing implies always doNothing)} for 2 Int is theorem
+  -- translate: 2.7s, solve: 291s
+  // permanentlyOver: {traces implies always (doNothing implies always doNothing)} for 2 Int for CellsAndLs is theorem
   -- checking for overconstraints in isLShape by testing if the red L can be in all of the corner orientations
-  -- for each: translate: ~20-50s, solve: <0.5s
   /* redLinCorners:
     -- TOP LEFT CORNER
-    -- translate: 62s, solve: 2.2s
-    {traces and eventually Game.red = -2->-1 + -2->-2 + -1->-2 + 0->-2} for 2 Int is sat
-    -- translate: 74s, solve: 4.1s
-    {traces and eventually Game.red = -1->-2 + -2->-2 + -2->-1 + -2->0} for 2 Int is sat
+    -- translate: 1.4s, solve: 0.2s
+    {traces and eventually cells[Game.red] = -2->-1 + -2->-2 + -1->-2 + 0->-2} for 2 Int for CellsAndLs is sat
+    -- translate: 1.3s, solve: 0.4s
+    {traces and eventually cells[Game.red] = -1->-2 + -2->-2 + -2->-1 + -2->0} for 2 Int for CellsAndLs is sat
     -- TOP RIGHT CORNER
-    -- translate: 33s, solve: 1.1s
-    {traces and eventually Game.red = -1->1 + -2->1 + -2->0 + -2->-1} for 2 Int is sat
-    -- translate: 33s, solve: 0.9s
-    {traces and eventually Game.red = -2->0 + -2->1 + -1->1 + 0->1} for 2 Int is sat
+    -- translate: 0.9s, solve: <0.1s
+    {traces and eventually cells[Game.red] = -1->1 + -2->1 + -2->0 + -2->-1} for 2 Int for CellsAndLs is sat
+    -- translate: 0.9s, solve: <0.1s
+    {traces and eventually cells[Game.red] = -2->0 + -2->1 + -1->1 + 0->1} for 2 Int for CellsAndLs is sat
     -- BOTTOM RIGHT CORNER
-    -- translate: 66s, solve: 2.6s
-    {traces and eventually Game.red = 1->0 + 1->1 + 0->1 + -1->1} for 2 Int is sat
-    -- translate: 64s, solve: 2.5s
-    {traces and eventually Game.red = 0->-2 + 1->-2 + 1->-1 + 1->0} for 2 Int is sat
+    -- translate: 1.4s, solve: 0.3s
+    {traces and eventually cells[Game.red] = 1->0 + 1->1 + 0->1 + -1->1} for 2 Int for CellsAndLs is sat
+    -- translate: 1.4s, solve: 0.3s
+    {traces and eventually cells[Game.red] = 0->-2 + 1->-2 + 1->-1 + 1->0} for 2 Int for CellsAndLs is sat
     -- BOTTOM LEFT CORNER
-    -- translate: 63s, solve: 2.8s
-    {traces and eventually Game.red = 0->1 + 1->1 + 1->0 + 1->-1} for 2 Int is sat
-    -- translate: 65s, solve: 2s
-    {traces and eventually Game.red = 1->-1 + 1->-2 + 0->-2 + -1->-2} for 2 Int is sat */
+    -- translate: 0.2s, solve: 0.2s
+    {traces and eventually cells[Game.red] = 0->1 + 1->1 + 1->0 + 1->-1} for 2 Int for CellsAndLs is sat
+    -- translate: 0.3s, solve: 0.3s
+    {traces and eventually cells[Game.red] = 1->-1 + 1->-2 + 0->-2 + -1->-2} for 2 Int for CellsAndLs is sat */
 
 
   -- SUDDEN DEATH VARIANT TESTS
 
-  -- translate: 18s, solve: 0.2s
-  //suddenDeathVacuity: {suddenDeathTraces} for 2 Int is sat
-  -- translate: 19s, solve: <0.1s
-  //suddenDeathNoNeutralMoves: {suddenDeathTraces and neutral' = neutral} for 2 Int is sat
-  -- translate: 19s, solve: <0.1s
-  //suddenDeathOneNeutralMove: {suddenDeathTraces and lone neutral' - neutral} for 2 Int is sat
-  -- translate: 19s, solve: <0.1s
-  //suddenDeathTwoNeutralMoves: {suddenDeathTraces and twoNeutral} for 2 Int is sat
-  -- translate: 200s, solve: 0.3s
-  //suddenDeathNoWinOneTurn: {suddenDeathTraces implies next_state canMove} for 2 Int is theorem
+  -- translate: 0.9s, solve: 0.2s
+  // suddenDeathVacuity: {suddenDeathTraces} for 2 Int for CellsAndLs is sat
+  -- translate: 0.7s, solve: <0.1s
+  // suddenDeathNoNeutralMoves: {suddenDeathTraces and neutral' = neutral} for 2 Int for CellsAndLs is sat
+  -- translate: 0.8s, solve: <0.1s
+  // suddenDeathOneNeutralMove: {suddenDeathTraces and lone neutral' - neutral} for 2 Int for CellsAndLs is sat
+  -- translate: 0.7s, solve: <0.1s
+  // suddenDeathTwoNeutralMoves: {suddenDeathTraces and twoNeutral} for 2 Int for CellsAndLs is sat
+  -- translate: 2.8s, solve: 0.3s
+  // suddenDeathNoWinOneTurn: {suddenDeathTraces implies next_state canMove} for 2 Int for CellsAndLs is theorem
 }
 
 -- trace with a winner
--- generation time: 19s
-run {traces and eventually doNothing} for 2 Int
+-- generation time: 1s
+run {traces and eventually doNothing} for 2 Int for CellsAndLs
 
 -- infinite loop trace (no winner)
--- generation time: 38s
-//run {traces and always canMove} for 2 Int
+-- generation time: 1s
+// run {traces and always canMove} for 2 Int for CellsAndLs
 
 -- trace with a winner and at least 5 moves
--- generation time: 65s
-//run {traces and next_state next_state next_state next_state canMove and eventually doNothing} for 2 Int
+-- generation time: 3.4s
+// run {traces and next_state next_state next_state next_state canMove and eventually doNothing} for 2 Int for CellsAndLs
 
 -- infinite loop trace, never loops back to first state
--- generation time: 60s
-//run {traces and always canMove and next_state (always not init)} for 2 Int
+-- generation time: 1.5s
+// run {traces and always canMove and next_state (always not init)} for 2 Int for CellsAndLs
 
 -- sudden death trace with a winner
--- generation time: 19s
-//run {suddenDeathTraces and eventually doNothing} for 2 Int
+-- generation time: 1s
+// run {suddenDeathTraces and eventually doNothing} for 2 Int for CellsAndLs
 
 -- infinite loop sudden death trace (no winner)
--- generation time: 39s
-//run {suddenDeathTraces and always canMove} for 2 Int
+-- generation time: 1.5s
+// run {suddenDeathTraces and always canMove} for 2 Int for CellsAndLs
