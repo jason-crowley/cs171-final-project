@@ -320,7 +320,7 @@ run {traces and eventually doNothing} for 2 Int for Ls
 
 -- infinite loop trace, never loops back to first state
 -- generation time: 0.8s
-// run {traces and always canMove and next_state (always not init)} for 2 Int for Ls
+//run {traces and always canMove and next_state (always not init)} for 2 Int for Ls
 
 -- sudden death trace with a winner
 -- generation time: 0.3s
