@@ -21,7 +21,7 @@ function fillPieces(row, col, color, offset) {
   if (color == "neutral") // Neutral 
     d3.select(svg)
       .append("rect")
-      .style("fill", "gray")
+      .style("fill", "purple")
       .attr("x", 5 + (col * 25))
       .attr("y", 5 + (row * 25) + offset * 120)
       .attr('width', 25)
@@ -31,19 +31,23 @@ function fillPieces(row, col, color, offset) {
 function printState(inst, offset) {
   drawGrid(offset)
   // Iterate through pieces in Game (red, blue, neutral) and call fillPieces
-  const red = inst.field("red").tuples()
-  console.log(inst)
-  const blue = inst.field("blue").tuples()
+  const red = inst.field("red").join(inst.signature("Game").join(inst.field("Ls"))).tuples() 
+  const blue = inst.field("blue").join(inst.signature("Game").join(inst.field("Ls"))).tuples()
   const neutral = inst.field("neutral").tuples()
 
-
   for (i = 0; i < 4; i++) {
-    fillPieces(parseInt(red[i].atoms(0)[1].id()) + 2, parseInt(red[i].atoms(0)[2].id()) + 2, "red", offset)
-    fillPieces(parseInt(blue[i].atoms(0)[1].id()) + 2, parseInt(blue[i].atoms(0)[2].id()) + 2, "blue", offset)
+    var r_row = parseInt((red[i].atoms(0)[1].id()).substring(1,2))
+    var r_col = parseInt((red[i].atoms(0)[1].id()).substring(2))
+    var b_row = parseInt((blue[i].atoms(0)[1].id()).substring(1,2))
+    var b_col = parseInt((blue[i].atoms(0)[1].id()).substring(2))
+    fillPieces(r_row, r_col, "red", offset)
+    fillPieces(b_row, b_col, "blue", offset)
   }
 
   for (i = 0; i < 2; i++) {
-    fillPieces(parseInt(neutral[i].atoms(0)[1].id()) + 2, parseInt(neutral[i].atoms(0)[2].id()) + 2, "neutral", offset)
+    var n_row = parseInt(neutral[i].atoms(0)[1].id()) + 2
+    var n_col = parseInt(neutral[i].atoms(0)[2].id()) + 2
+    fillPieces(n_row, n_col, "neutral", offset)
   }
 
 }
