@@ -23,3 +23,5 @@ When we were finished with most of our target goals, we deided to also add in th
 ### instructions for running, understanding instances/visualization
 
 We've included six run statements in our file, with each one corresponding to a different type of game trace (explained in lgame.frg). The default uncommented one just produces a trace with a winner. Our visualization.js script should produce a visualization of multiple 4x4 grids, which from top to bottom represent the board and pieces in each game state. In produced traces that show infinite play, an arrow points from the last produced game state to the state where the loop begins.
+
+Demo link: https://youtu.be/YZ1G33jQWkY
