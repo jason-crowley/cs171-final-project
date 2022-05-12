@@ -67,35 +67,46 @@ pred isLShape[r1, c1, r2, c2, r3, c3, r4, c4: Int] {
   }
 }
 
-pred wellFormed {
-  always {
-    #neutral = 2
-
-    no red.cells & blue.cells
-    no (red + blue).cells & neutral
+pred validConfig[redL, blueL: one L, neutr: set Int->Int] {
+  some r1, c1, r2, c2: Int | {
+    r1 <= r2
+    r1->c1 != r2->c2
+    neutr = r1->c1 + r2->c2
   }
+  no redL.cells & blueL.cells
+  no (redL + blueL).cells & neutr
 }
 
-pred validMove[l: one L] {
+test expect {
+  // initValid: {init and validConfig[Game.red, Game.blue, Game.neutral]} for 2 Int for Ls is sat
+}
+
+pred wellFormed {
+  always validConfig[Game.red, Game.blue, Game.neutral]
+}
+
+pred validMove[l: one L, neutr: set Int->Int] {
   Game.turn = Red => {
     l != Game.red
-    l.cells in Int->Int - Game.(blue.cells + neutral)
+    validConfig[l, Game.blue, Game.neutral]
+    validConfig[l, Game.blue, neutr]
   } else {
     l != Game.blue
-    l.cells in Int->Int - Game.(red.cells + neutral)
+    validConfig[Game.red, l, Game.neutral]
+    validConfig[Game.red, l, neutr]
   }
 }
 
 pred canMove {
-  some l: L | validMove[l]
+  some l: L | validMove[l, Game.neutral]
 }
 
 pred isWinner[p: Player] {
   Game.turn != p and not canMove
 }
 
-pred trans[l: one L] {
-  validMove[l]
+pred trans[l: one L, neutr: set Int->Int] {
+  validMove[l, neutr]
   Game.turn = Red => {
     Game.red' = l
     blue' = blue
@@ -104,6 +115,7 @@ pred trans[l: one L] {
     red' = red
   }
   lone neutral' - neutral
+  Game.neutral' = neutr
   turn' != turn
 }
 
@@ -116,18 +128,20 @@ pred doNothing {
 }
 
 pred traces {
-  init
   wellFormed
   always {
     canMove => {
-      some l: L | trans[l]
+      some l: L, r1, c1, r2, c2: Int | {
+        r1 <= r2
+        trans[l, r1->c1 + r2->c2]
+      }
     } else doNothing
   }
 }
 
 -- sudden death variant: players can move both neutral pieces instead of at most one
-pred suddenDeathTrans[l: one L] {
-  validMove[l]
+pred suddenDeathTrans[l: one L, neutr: set Int->Int] {
+  validMove[l, neutr]
   Game.turn = Red => {
     Game.red' = l
     blue' = blue
@@ -135,10 +149,8 @@ pred suddenDeathTrans[l: one L] {
     Game.blue' = l
     red' = red
   }
+  Game.neutral' = neutr
   turn' != turn
-  some r5, c5, r6, c6: Int | {
-    Game.neutral' = r5->c5 + r6->c6
-  }
 }
 
 pred suddenDeathTraces {
@@ -146,7 +158,10 @@ pred suddenDeathTraces {
   wellFormed
   always {
     canMove => {
-      some l: L | suddenDeathTrans[l]
+      some l: L, r1, c1, r2, c2: Int | {
+        r1 <= r2
+        suddenDeathTrans[l, r1->c1 + r2->c2]
+      }
     } else doNothing
   }
 }
@@ -239,7 +254,7 @@ inst Ls {
 }
 
 
--- Ls Tests
+-- Model/Instance Tests
 test expect {
   -- translate: 3s, solve: <0.1s
   // allLs: {
@@ -252,40 +267,117 @@ test expect {
 }
 
 
--- Standard Game Tests
+-- Standard Game Property Tests
 test expect {
   -- translate: 0.3s, solve: <0.1s
-  // vacuity: {traces} for 2 Int for Ls is sat
+  // vacuity: {init and traces} for 2 Int for Ls is sat
   -- the game can end (there can be a winner)
   -- translate: 0.3s, solve: <0.1s
-  // canEndGame: {traces and eventually doNothing} for 2 Int for Ls is sat
+  // canEndGame: {init and traces and eventually doNothing} for 2 Int for Ls is sat
   -- the game can never end
   -- translate: 3s, solve: <0.1s
-  // canPlayInfinite: {traces and always canMove} for 2 Int for Ls is sat
+  // canPlayInfinite: {init and traces and always canMove} for 2 Int for Ls is sat
   -- a player can choose to move no neutral piece
   -- translate: 0.3s, solve: <0.1s
-  // noNeutralMoveVacuity: {traces noNeutralMoves} for 2 Int for Ls is sat
+  // noNeutralMoveVacuity: {init and traces and noNeutralMoves} for 2 Int for Ls is sat
   -- there can't be a winner without a neutral piece being moved
   -- translate: 1s, solve: 2.2s
-  // noWinUnlessNeutralMove: {(traces and noNeutralMoves) implies always canMove} for 2 Int for Ls is theorem
+  // noWinUnlessNeutralMove: {(init and traces and noNeutralMoves) implies always canMove} for 2 Int for Ls is theorem
   -- can't win on the first turn
   -- translate: 1.1s, solve: 0.2s
-  // noWinOneTurn: {traces implies next_state canMove} for 2 Int for Ls is theorem
+  // noWinOneTurn: {(init and traces) implies next_state canMove} for 2 Int for Ls is theorem
   -- can win in two turns
   -- translate: 0.2s, solve: <0.1s
-  // canWinTwoTurns: {traces and next_state next_state (some p: Player | isWinner[p])} for 2 Int for Ls is sat
+  // canWinTwoTurns: {init and traces and next_state next_state (some p: Player | isWinner[p])} for 2 Int for Ls is sat
   -- red can win
   -- translate: 0.3s, solve: 0.4s
-  // redCanWin: {traces and eventually isWinner[Red]} for 2 Int for Ls is sat
+  // redCanWin: {init and traces and eventually isWinner[Red]} for 2 Int for Ls is sat
   -- blue can win
   -- translate: 0.3s, solve: <0.1s
-  // blueCanWin: {traces and eventually isWinner[Blue]} for 2 Int for Ls is sat
+  // blueCanWin: {init and traces and eventually isWinner[Blue]} for 2 Int for Ls is sat
   -- if the game is not over, no one can move twice in a row
   -- translate: 1s, solve: 27s
   // sameTurnNotGameOver: {traces implies always (canMove => turn' != turn)} for 2 Int for Ls is theorem
   -- once the game ends (nobody takes a move during that turn) the game is permanently over (no further moves will be taken)
   -- translate: 1s, solve: 234s
-  // permanentlyOver: {traces implies always (doNothing implies always doNothing)} for 2 Int for Ls is theorem
+  // permanentlyOver: {(traces and doNothing) implies always doNothing} for 2 Int for Ls is theorem
+}
+
+-- Strategy Tests
+test expect {
+  -- translate: 0.1s, solve: <0.1s
+  canSometimesKeepInCorner: {
+    // red has blue in the top-left corner
+    -1->-2 + -2->-2 + -2->-1 in Game.blue.cells
+    validConfig[Game.red, Game.blue, Game.neutral]
+    // find a move for red such that blue is trapped in the corner
+    some redL: L - Game.red, r1, c1, r2, c2: Int | {
+      r1 <= r2
+      validConfig[redL, Game.blue, Game.neutral]
+      validConfig[redL, Game.blue, r1->c1 + r2->c2]
+      all blueL: L - Game.blue | {
+        validConfig[redL, blueL, r1->c1 + r2->c2] implies
+          -1->-2 + -2->-2 + -2->-1 in blueL.cells
+      }
+    }
+  } for 2 Int for Ls is sat
+
+  -- translate: 3.1s, solve: <0.1s
+  cannotAlwaysKeepInCorner: {
+    // red has blue in the top-left corner
+    -1->-2 + -2->-2 + -2->-1 in Game.blue.cells
+    validConfig[Game.red, Game.blue, Game.neutral]
+    // no matter what move red makes, blue can escape from the corner
+    not {
+      some redL: L - Game.red, r1, c1, r2, c2: Int | {
+        r1 <= r2
+        validConfig[redL, Game.blue, Game.neutral]
+        validConfig[redL, Game.blue, r1->c1 + r2->c2]
+        all blueL: L - Game.blue | {
+          validConfig[redL, blueL, r1->c1 + r2->c2] implies
+            -1->-2 + -2->-2 + -2->-1 in blueL.cells
+        }
+      }
+    }
+  } for 2 Int for Ls is sat
+
+  -- translate: 6.8s, solve: 1s
+  allLConfigsReachableIn5: {
+    init
+    // try to find a valid target configuration with neutrals in starting positions
+    // such that it is not reachable from initial in 5 moves (without moving neutrals)
+    // (you can't, it will be unsat)
+    some redTargetL, blueTargetL: L | {
+      validConfig[redTargetL, blueTargetL, Game.neutral]
+      no redL1: L - Game.red, blueL: L - (Game.blue + blueTargetL), redL2: L - (redL1 + redTargetL) | {
+        validConfig[redL1, Game.blue, Game.neutral]
+        validConfig[redL1, blueL, Game.neutral]
+        validConfig[redL2, blueL, Game.neutral]
+        validConfig[redL2, blueTargetL, Game.neutral]
+      }
+    }
+  } for 2 Int for Ls is unsat
+
+  -- translate: 1262s, solve: <0.1s
+  canAlwaysAvoidLosingNextTurn: {
+    validConfig[Game.red, Game.blue, Game.neutral]
+    // try to find a configuration such that no matter what move red makes,
+    // blue has some move to ensure that red will lose on their next turn
+    // (you can't, it will be unsat)
+    all redL1: L - Game.red, r1, c1, r2, c2: Int | {
+      r1 <= r2
+      validConfig[redL1, Game.blue, Game.neutral]
+      validConfig[redL1, Game.blue, r1->c1 + r2->c2]
+      some blueL: L - Game.blue, r3, c3, r4, c4: Int | {
+        r3 <= r4
+        validConfig[redL1, blueL, r1->c1 + r2->c2]
+        validConfig[redL1, blueL, r3->c3 + r4->c4]
+        no redL2: L - redL1 {
+          validConfig[redL2, blueL, r3->c3 + r4->c4]
+        }
+      }
+    }
+  } for 2 Int for Ls is unsat
 }
 
 
@@ -308,19 +400,19 @@ test expect {
 
 -- trace with a winner
 -- generation time: 0.4s
-run {traces and eventually doNothing} for 2 Int for Ls
+run {init and traces and eventually doNothing} for 2 Int for Ls
 
 -- infinite loop trace (no winner)
 -- generation time: 0.4s
-// run {traces and always canMove} for 2 Int for Ls
+// run {init and traces and always canMove} for 2 Int for Ls
 
 -- trace with a winner and at least 5 moves
 -- generation time: 2.3s
-// run {traces and next_state next_state next_state next_state canMove and eventually doNothing} for 2 Int for Ls
+// run {init and traces and next_state next_state next_state next_state canMove and eventually doNothing} for 2 Int for Ls
 
 -- infinite loop trace, never loops back to first state
 -- generation time: 0.8s
-//run {traces and always canMove and next_state (always not init)} for 2 Int for Ls
+//run {init and traces and always canMove and next_state (always not init)} for 2 Int for Ls
 
 -- sudden death trace with a winner
 -- generation time: 0.3s
