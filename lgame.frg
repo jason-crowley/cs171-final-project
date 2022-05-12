@@ -293,13 +293,17 @@ test expect {
 test expect {
   -- translate: 0.3s, solve: <0.1s
   // suddenDeathVacuity: {suddenDeathTraces} for 2 Int for Ls is sat
+  -- you can move 0 neutral pieces in the sudden death variant
   -- translate: 0.3s, solve: <0.1s
   // suddenDeathNoNeutralMoves: {suddenDeathTraces and neutral' = neutral} for 2 Int for Ls is sat
   -- translate: 0.3s, solve: <0.1s
+  -- you can move 1 neutral piece in the sudden death variant
   // suddenDeathOneNeutralMove: {suddenDeathTraces and lone neutral' - neutral} for 2 Int for Ls is sat
   -- translate: 0.3s, solve: <0.1s
+  -- you can move 2 neutral pieces in the sudden death variant
   // suddenDeathTwoNeutralMoves: {suddenDeathTraces and twoNeutral} for 2 Int for Ls is sat
   -- translate: 1.2s, solve: 0.3s
+  -- in the sudden death variant, you still can't win on the first turn
   // suddenDeathNoWinOneTurn: {suddenDeathTraces implies next_state canMove} for 2 Int for Ls is theorem
 }
 
@@ -326,6 +330,6 @@ run {traces and eventually doNothing} for 2 Int for Ls
 -- generation time: 0.3s
 // run {suddenDeathTraces and eventually doNothing} for 2 Int for Ls
 
--- infinite loop sudden death trace (no winner)
+-- sudden death infinite loop trace (no winner)
 -- generation time: 0.4s
 // run {suddenDeathTraces and always canMove} for 2 Int for Ls
